@@ -155,3 +155,9 @@ The SDN OpenFlow controller and Mininet experiment are archived on the dedicated
 * Custom POX controller application (`logger.py`) logging MAC/IP headers at switch `s1`.
 * Complete Mininet 3-host reactive flow management proof with Ubuntu VirtualBox screenshots.
 
+---
+
+## 👤 Author
+
+* **Tanmayi Nagabhairava** ([@Tanmayi-n14](https://github.com/Tanmayi-n14)) — `PES1UG24CS493`
+* Department of Computer Science & Engineering, PES University
