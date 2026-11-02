@@ -121,3 +121,37 @@ def start_smart_controller():
 | **State Persistence** | NVRAM Simulation | Resumes Mode/Threshold after Power Cut |
 
 **Observation**: The system successfully demonstrated the ability to prioritize hardware safety over immediate responsiveness. During testing, the **Short-Cycle Lockout** effectively blocked multiple "Turn ON" requests during the cooldown phase, ensuring the simulated hardware was never subjected to unsafe pressure levels.
+
+---
+
+## 8. ICMP-Based Network Diagnostic Suite (Ping & Traceroute)
+
+Located in [`icmp_network_diagnostic_suite/`](./icmp_network_diagnostic_suite).
+
+### Architecture & Capabilities:
+* **Raw Sockets**: Uses raw `socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)` for low-level network packet crafting.
+* **Internet Checksum**: RFC 1071 one's complement 16-bit checksum computation in `checksum.py` and `icmp_core.c`.
+* **Ping Engine (`ping_engine.py` — Tanmayi)**:
+  * Manages iterative ICMP Echo Requests with strict sequence numbering.
+  * Calculates real-time Round Trip Time (RTT): min, avg, max, and packet loss percentage.
+  * Robust error handling for request timeouts and network unreachable signals.
+* **Core Packet Engine (`icmp_core.py` — Tanisha)**:
+  * Packet serialization, TTL manipulation for Traceroute hop discovery, and response parsing.
+* **Frontend Dashboard**:
+  * `dashboard.html` visualizing live probe statistics and network health.
+
+### Execution:
+```bash
+cd icmp_network_diagnostic_suite
+# Run Ping Engine (requires sudo/administrator privileges for raw ICMP sockets)
+python -m core.ping_engine
+```
+
+---
+
+## 9. Level 2 Orange Project: SDN Packet Logger
+The SDN OpenFlow controller and Mininet experiment are archived on the dedicated branch:
+👉 [**Branch: `SDN-orange-problem-Tanmayi-CS493`**](../../tree/SDN-orange-problem-Tanmayi-CS493)
+* Custom POX controller application (`logger.py`) logging MAC/IP headers at switch `s1`.
+* Complete Mininet 3-host reactive flow management proof with Ubuntu VirtualBox screenshots.
+

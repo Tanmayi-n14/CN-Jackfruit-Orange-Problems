@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICMP Network Diagnostic Suite</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #080d14;
+            --surface: #0d1520;
+            --border: #1a2d45;
+            --accent: #00b4ff;
+            --green: #00ff88;
+            --text: #c8d8e8;
+            --muted: #5a7a9a;
+            --warning: #ff6b35;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        h1, h2, h3, .mono {
+            font-family: 'Space Mono', monospace;
+            font-weight: 700;
+        }
+
+        code, .terminal-text {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Nav */
+        nav {
+            position: sticky;
+            top: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background: rgba(8, 13, 20, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
+        }
+        .logo { color: var(--text); text-decoration: none; font-family: 'Space Mono'; font-weight: bold; }
+        .nav-links a { color: var(--muted); text-decoration: none; margin-left: 2rem; font-size: 0.9rem; transition: color 0.2s; }
+        .nav-links a:hover { color: var(--accent); }
+
+        /* General Section Layout */
+        section {
+            padding: 6rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-label {
+            color: var(--muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .section-label::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+        .section-title {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            color: white;
+        }
+
+        /* Animations */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Hero Section */
+        #hero {
+            display: flex;
+            gap: 4rem;
+            align-items: center;
+            min-height: calc(100vh - 70px);
+        }
+        .hero-left { flex: 0 0 55%; }
+        .hero-right { flex: 0 0 40%; }
+        
+        .hero-tag { color: var(--accent); font-size: 0.8rem; letter-spacing: 1px; margin-bottom: 1rem; display: block; }
+        .hero-title { font-size: 4rem; line-height: 1.1; margin-bottom: 1.5rem; color: white; }
+        .hero-sub { color: var(--muted); font-size: 1.1rem; max-width: 500px; margin-bottom: 2rem; }
+        
+        .pill-container { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .pill { 
+            background: var(--surface); color: var(--text); border: 1px solid var(--border);
+            padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; font-family: 'Space Mono';
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .pill::before { content: "🔵"; font-size: 0.7rem; }
+
+        .terminal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .terminal-header {
+            background: #152233; padding: 0.5rem; display: flex; gap: 0.5rem; align-items: center;
+        }
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot-red { background: #ff5f56; } .dot-yellow { background: #ffbd2e; } .dot-green { background: #27c93f; }
+        .terminal-body {
+            padding: 1.5rem; color: var(--green);
+            font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; line-height: 1.5;
+            min-height: 250px;
+        }
+        .cursor-blink { animation: blink 1s step-end infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* The Basics Section */
+        .grid-2x2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        .card {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+            padding: 2rem; transition: border-color 0.3s;
+        }
+        .card:hover { border-color: var(--accent); }
+        .card-icon { color: var(--accent); font-size: 1.5rem; margin-bottom: 1rem; }
+        .card-title { font-family: 'Space Mono'; color: white; font-size: 1.2rem; margin-bottom: 0.5rem; }
+        .card-text { color: var(--muted); font-size: 0.95rem; }
+
+        /* How it works Section */
+        .split { display: flex; gap: 4rem; }
+        .split > div { flex: 1; }
+        .divider { width: 1px; background: var(--border); }
+        
+        .how-title { color: white; font-size: 1.5rem; margin-bottom: 2rem; font-family: 'Space Mono'; }
+        
+        .ping-diagram {
+            margin: 2rem 0; font-family: 'Space Mono'; font-size: 0.9rem;
+            position: relative; padding: 1rem; border: 1px dashed var(--border); border-radius: 4px;
+        }
+        .ping-line { display: flex; justify-content: space-between; align-items: center; margin: 1rem 0; position: relative;}
+        .anim-line { flex: 1; height: 1px; background: var(--muted); margin: 0 1rem; position: relative; }
+        
+        .dot-travel-right {
+            position: absolute; width: 6px; height: 6px; background: var(--accent); border-radius: 50%;
+            top: -2px; left: 0; animation: travel-r 2s infinite ease-in-out;
+        }
+        .dot-travel-left {
+            position: absolute; width: 6px; height: 6px; background: var(--green); border-radius: 50%;
+            top: -2px; right: 0; animation: travel-l 2s infinite ease-in-out; animation-delay: 1s;
+        }
+        
+        @keyframes travel-r { 0% { left: 0; opacity: 1; } 50%, 100% { left: 100%; opacity: 0; } }
+        @keyframes travel-l { 0% { right: 0; opacity: 1;} 50%, 100% { right: 100%; opacity: 0; } }
+        
+        .code-block {
+            background: #0a111a; border: 1px solid var(--border); padding: 1rem; border-radius: 4px;
+            font-family: 'JetBrains Mono'; font-size: 0.85rem; color: var(--text); margin-top: 1rem;
+        }
+
+        .trace-hop {
+            display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; font-family: 'Space Mono'; font-size: 0.9rem;
+            opacity: 0; transform: translateY(10px);
+        }
+        .trace-hop.visible { opacity: 1; transform: translateY(0); transition: opacity 0.3s, transform 0.3s; }
+        .hop-arrow { color: var(--muted); }
+        .hop-box { background: var(--surface); padding: 0.5rem 1rem; border: 1px solid var(--border); border-radius: 4px; }
+        .hop-rtt { color: var(--green); font-size: 0.8rem; margin-left: auto; }
+
+        /* Project Structure */
+        .pipeline { display: flex; align-items: center; gap: 1rem; margin-top: 3rem; overflow-x: auto; padding-bottom: 2rem;}
+        .pipeline-card {
+            flex: 1; min-width: 280px; background: var(--surface); border: 1px solid var(--border);
+            padding: 1.5rem; border-radius: 8px; position: relative;
+        }
+        .pipeline-card.highlight { border-color: var(--accent); box-shadow: 0 0 15px rgba(0, 180, 255, 0.1); }
+        .pipeline-arrow { color: var(--muted); font-size: 1.5rem; }
+        .card-badge { font-size: 0.7rem; color: var(--accent); font-family: 'Space Mono'; letter-spacing: 1px; margin-bottom: 0.5rem; display: block;}
+        .small-pill { display: inline-block; background: rgba(255,255,255,0.05); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-family: 'JetBrains Mono'; margin-top: 1rem; margin-right: 0.5rem; color: var(--text);}
+
+        /* Demo Section */
+        .demo-terminal { width: 100%; margin-top: 2rem;}
+        .demo-input-row { display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center; }
+        .cmd-prompt { color: var(--text); }
+        .demo-input {
+            background: transparent; border: none; border-bottom: 1px solid var(--border); color: var(--text);
+            font-family: 'JetBrains Mono'; font-size: 1rem; padding: 0.3rem; outline: none; flex: 1;
+        }
+        .demo-input:focus { border-bottom-color: var(--accent); }
+        .btn-probe {
+            background: transparent; border: 1px solid var(--accent); color: var(--accent); font-family: 'Space Mono';
+            padding: 0.5rem 1rem; cursor: pointer; border-radius: 4px; transition: all 0.2s;
+        }
+        .btn-probe:hover { background: var(--accent); color: var(--bg); }
+        .demo-output {
+            margin-top: 1rem; border-top: 1px dashed var(--border); padding-top: 1rem; max-height: 300px;
+            overflow-y: auto; white-space: pre-wrap; font-size: 0.9rem;
+        }
+        .text-warning { color: var(--warning); }
+        .text-accent { color: var(--accent); }
+        
+        .stats-grid { display: flex; gap: 1rem; margin-top: 2rem; }
+        .stat-box { flex: 1; background: var(--surface); border: 1px solid var(--border); padding: 1.5rem; text-align: center; border-radius: 8px;}
+        .stat-label { color: var(--muted); font-family: 'Space Mono'; font-size: 0.8rem; letter-spacing: 1px; margin-bottom: 0.5rem;}
+        .stat-value { color: white; font-size: 2rem; font-family: 'Space Mono'; display: flex; justify-content: center; align-items: baseline; gap: 0.5rem;}
+        .stat-sub { font-size: 0.9rem; color: var(--muted); }
+
+        /* Footer */
+        footer { border-top: 1px solid var(--border); padding: 3rem 2rem; background: var(--surface); margin-top: 4rem; }
+        .footer-content { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: flex-start;}
+        .footer-text { max-width: 400px; }
+        .footer-bottom { border-top: 1px dashed var(--border); margin-top: 2rem; padding-top: 1rem; color: var(--muted); font-size: 0.85rem; text-align: center; font-family: 'Space Mono';}
+
+        @media (max-width: 768px) {
+            #hero, .split, .pipeline, .footer-content { flex-direction: column; gap: 2rem;}
+            .grid-2x2 { grid-template-columns: 1fr; }
+            .hero-title { font-size: 2.5rem; }
+            .stats-grid { flex-direction: column; }
+            .divider { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a href="#" class="logo">[ICMP SUITE]</a>
+        <div class="nav-links">
+            <a href="#about">About</a>
+            <a href="#how">How It Works</a>
+            <a href="#demo">Demo</a>
+        </div>
+    </nav>
+
+    <!-- SECTION 1: HERO -->
+    <section id="hero" class="fade-in">
+        <div class="hero-left">
+            <span class="hero-tag">[ NETWORK DIAGNOSTICS ]</span>
+            <h1 class="hero-title">We Built Ping<br>From Scratch.</h1>
+            <p class="hero-sub">Most tools hide what's happening under the hood. This one doesn't. ICMP Suite is a raw socket network diagnostic tool — no system binaries, no shortcuts. Just pure packet-level networking, built in Python and C.</p>
+            <div class="pill-container">
+                <span class="pill">Raw ICMP Sockets</span>
+                <span class="pill">Python + C</span>
+                <span class="pill">No Root? No Run.</span>
+            </div>
+        </div>
+        <div class="hero-right">
+            <div class="terminal">
+                <div class="terminal-header">
+                    <div class="dot dot-red"></div>
+                    <div class="dot dot-yellow"></div>
+                    <div class="dot dot-green"></div>
+                </div>
+                <div class="terminal-body" id="hero-term"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 2: THE BASICS -->
+    <section id="about">
+        <div class="section-label fade-in">THE BASICS</div>
+        <h2 class="section-title fade-in">You've used ping. You've never seen how it actually works.</h2>
+        <p class="hero-sub fade-in" style="margin-bottom: 3rem;">When you type `ping google.com`, your computer sends a tiny message across the internet and waits for Google to say 'got it'. The time it takes to get a reply is called RTT — Round Trip Time. We built the exact same thing from scratch, using raw ICMP sockets — the same low-level protocol your operating system uses.</p>
+        
+        <div class="grid-2x2">
+            <div class="card fade-in">
+                <div class="card-icon">✉️</div>
+                <h3 class="card-title">What is ICMP?</h3>
+                <p class="card-text">Internet Control Message Protocol. It's how computers on a network send error messages and operational info to each other. Ping is built on top of it.</p>
+            </div>
+            <div class="card fade-in">
+                <div class="card-icon">🔌</div>
+                <h3 class="card-title">Why Raw Sockets?</h3>
+                <p class="card-text">Normally your OS handles packets for you. Raw sockets let you build packets byte by byte — full control, full responsibility. That's why root/sudo is required.</p>
+            </div>
+            <div class="card fade-in">
+                <div class="card-icon">⏱️</div>
+                <h3 class="card-title">Round Trip Time</h3>
+                <p class="card-text">The milliseconds between sending a packet and receiving the reply. Lower = better connection. High RTT = something's slow between you and the destination.</p>
+            </div>
+            <div class="card fade-in">
+                <div class="card-icon">⛓️‍💥</div>
+                <h3 class="card-title">Packet Loss</h3>
+                <p class="card-text">When a packet you send never gets a reply. Could be congestion, a firewall blocking ICMP, or the host being down. Measured as a percentage.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 3: HOW IT WORKS -->
+    <section id="how">
+        <div class="section-label fade-in">HOW IT WORKS</div>
+        <h2 class="section-title fade-in">Two tools. One suite.</h2>
+
+        <div class="split">
+            <!-- PING -->
+            <div class="fade-in">
+                <h3 class="how-title">Ping — Am I connected?</h3>
+                
+                <div class="ping-diagram">
+                    <div class="ping-line">
+                        [YOUR PC] 
+                        <div class="anim-line"><div class="dot-travel-right"></div></div> 
+                        [8.8.8.8]
+                    </div>
+                    <div style="text-align: center; font-size: 0.75rem; color: var(--muted); margin: -0.5rem 0 0.5rem 0;">ICMP Echo Request</div>
+                    
+                    <div class="ping-line">
+                        [YOUR PC] 
+                        <div class="anim-line"><div class="dot-travel-left"></div></div> 
+                        [8.8.8.8]
+                    </div>
+                    <div style="text-align: center; font-size: 0.75rem; color: var(--muted); margin-top: -0.5rem;">ICMP Echo Reply</div>
+                </div>
+
+                <p class="card-text" style="margin-bottom: 2rem;">We send an ICMP Echo Request to the target IP.<br>The target sends back an Echo Reply.<br>We measure the time difference — that's your RTT.</p>
+                
+                <div class="code-block">
+                    result = probe_host("8.8.8.8", ttl=64, sequence=1)<br>
+                    <span style="color: var(--muted)"># ProbeResult(rtt_ms=12.4, received=True, ...)</span>
+                </div>
+            </div>
+
+            <div class="divider fade-in"></div>
+
+            <!-- TRACEROUTE -->
+            <div class="fade-in">
+                <h3 class="how-title">Traceroute — What's the path?</h3>
+                
+                <div id="traceroute-diagram" style="margin: 2rem 0;">
+                    <div class="trace-hop">[YOUR PC]</div>
+                    <div class="trace-hop"><span class="hop-arrow">│ TTL=1<br>▼</span></div>
+                    <div class="trace-hop"><div class="hop-box">[Router 1]</div><span class="hop-rtt">← 192.168.1.1 — 2.1ms</span></div>
+                    <div class="trace-hop"><span class="hop-arrow">│ TTL=2<br>▼</span></div>
+                    <div class="trace-hop"><div class="hop-box">[Router 2]</div><span class="hop-rtt">← 72.14.209.81 — 8.4ms</span></div>
+                    <div class="trace-hop"><span class="hop-arrow">│ TTL=3<br>▼</span></div>
+                    <div class="trace-hop"><div class="hop-box" style="border-color: var(--accent); color: white;">[DESTINATION]</div><span class="hop-rtt">← 8.8.8.8 — 12.4ms ✓</span></div>
+                </div>
+
+                <p class="card-text">We send packets with TTL=1. The first router hits zero, dies, and replies 'Time Exceeded' — revealing its IP.<br>We increment TTL each time, peeling back each hop until we reach the destination.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 4: PROJECT STRUCTURE -->
+    <section>
+        <div class="section-label fade-in">PROJECT STRUCTURE</div>
+        <h2 class="section-title fade-in">3 people. 3 modules. One tool.</h2>
+
+        <div class="pipeline fade-in">
+            <div class="pipeline-card highlight">
+                <span class="card-badge">CORE LAYER</span>
+                <h3 class="card-title" style="font-size: 1.1rem;">Raw Socket & ICMP Packets</h3>
+                <p class="card-text" style="font-size: 0.85rem;">Foundation of the entire tool. Handles socket creation, packet construction, checksum calculation, and the probe_host() function everyone depends on.</p>
+                <div>
+                    <span class="small-pill">icmp_core.py</span>
+                    <span class="small-pill">icmp_core.c</span>
+                </div>
+            </div>
+            
+            <span class="pipeline-arrow">→</span>
+            
+            <div class="pipeline-card">
+                <span class="card-badge">PING MODULE</span>
+                <h3 class="card-title" style="font-size: 1.1rem;">RTT & Statistics</h3>
+                <p class="card-text" style="font-size: 0.85rem;">Uses the core layer to send multiple probes in a loop. Calculates average RTT, min/max, and packet loss percentage.</p>
+                <div>
+                    <span class="small-pill">ping_engine.py</span>
+                </div>
+            </div>
+
+            <span class="pipeline-arrow">→</span>
+
+            <div class="pipeline-card">
+                <span class="card-badge">TRACEROUTE MODULE</span>
+                <h3 class="card-title" style="font-size: 1.1rem;">Path Discovery</h3>
+                <p class="card-text" style="font-size: 0.85rem;">Calls probe_host() with increasing TTL values to discover every router on the path to the destination.</p>
+                <div>
+                    <span class="small-pill">traceroute_engine.py</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 5: DEMO -->
+    <section id="demo">
+        <div class="section-label fade-in">DEMO</div>
+        <h2 class="section-title fade-in" style="margin-bottom: 0.5rem;">See it in action.</h2>
+        <p class="hero-sub fade-in" style="font-size: 0.95rem;">This is a simulation — actual execution requires raw socket privileges (sudo). The output below reflects real behavior.</p>
+
+        <div class="terminal demo-terminal fade-in">
+            <div class="terminal-header">
+                <div class="dot dot-red"></div>
+                <div class="dot dot-yellow"></div>
+                <div class="dot dot-green"></div>
+                <span style="color: #888; font-family: 'Space Mono'; font-size: 0.8rem; margin-left: auto;">icmp_suite — bash</span>
+            </div>
+            <div class="terminal-body">
+                <div class="demo-input-row">
+                    <span class="cmd-prompt">$ sudo python3 run.py</span>
+                    <input type="text" id="target-input" class="demo-input" placeholder="8.8.8.8 google.com github.com" value="8.8.8.8">
+                    <button id="btn-probe" class="btn-probe">PROBE</button>
+                </div>
+                <div id="demo-out" class="demo-output"></div>
+            </div>
+        </div>
+
+        <div class="stats-grid fade-in">
+            <div class="stat-box">
+                <div class="stat-label">PACKETS SENT</div>
+                <div class="stat-value" id="stat-sent">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">RECEIVED</div>
+                <div class="stat-value"><span id="stat-recv">0</span> <span class="stat-sub">%</span></div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">AVG RTT</div>
+                <div class="stat-value"><span id="stat-rtt">0.0</span> <span class="stat-sub">ms</span></div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-text">
+                <h3 class="logo" style="margin-bottom: 0.5rem;">[ICMP SUITE]</h3>
+                <p class="card-text">Diagnostic tool built with raw sockets, no shortcuts.</p>
+            </div>
+            <div style="text-align: left;">
+                <span class="small-pill">Python</span>
+                <span class="small-pill">C</span>
+                <span class="small-pill">Raw Sockets</span>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            CS Networks Project · 2025 · No system binaries were harmed in the making of this tool.
+        </div>
+    </footer>
+
+    <script>
+        // --- Scroll Animations ---
+        const observerOptions = { root: null, rootMargin: '0px', threshold: 0.15 };
+        const observer = new IntersectionObserver((entries, obs) => {
+            entries.forEach(entry => {
+                if(entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    obs.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+        
+        document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+        // Traceroute diagram stagger
+        const traceObserver = new IntersectionObserver((entries) => {
+            if(entries[0].isIntersecting) {
+                const hops = document.querySelectorAll('.trace-hop');
+                hops.forEach((hop, i) => {
+                    setTimeout(() => hop.classList.add('visible'), i * 150);
+                });
+                traceObserver.disconnect();
+            }
+        });
+        traceObserver.observe(document.getElementById('traceroute-diagram'));
+
+        // --- Hero Terminal Typing Animation ---
+        const heroLines = [
+            "$ sudo python3 icmp_core.py",
+            "> Resolving 8.8.8.8...",
+            "> Raw socket created ✓",
+            "> [SEQ 1] RTT: 12.4ms ✓",
+            "> [SEQ 2] RTT: 11.9ms ✓",
+            "> [SEQ 3] TIMEOUT ✗",
+            "> Loss: 33.3% | Avg: 12.1ms"
+        ];
+        
+        let heroTermObj = document.getElementById("hero-term");
+        async function typeHero() {
+            for(let i=0; i<heroLines.length; i++) {
+                heroTermObj.innerHTML += heroLines[i] + "<br>";
+                await new Promise(r => setTimeout(r, 400));
+            }
+            heroTermObj.innerHTML += `<span class="cursor-blink">_</span>`;
+        }
+        setTimeout(typeHero, 500);
+
+        // --- Demo Interactive ---
+        const outputDiv = document.getElementById("demo-out");
+        const probeBtn = document.getElementById("btn-probe");
+        const inpt = document.getElementById("target-input");
+        
+        const uiSent = document.getElementById("stat-sent");
+        const uiRecv = document.getElementById("stat-recv");
+        const uiRtt = document.getElementById("stat-rtt");
+
+        let demoLines = [];
+        
+        async function runDemo() {
+            const target = inpt.value || "8.8.8.8";
+            outputDiv.innerHTML = "";
+            probeBtn.disabled = true;
+            probeBtn.style.opacity = 0.5;
+
+            uiSent.innerText = "0";
+            uiRecv.innerText = "0.0";
+            uiRtt.innerText = "0.0";
+
+            demoLines = [
+                `[ICMP SUITE v1.0] Starting probe sequence...`,
+                `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+                ``,
+                `TARGET: ${target}`,
+                `> Resolving... ${target} (no DNS needed)`,
+                `> Socket created (AF_INET, SOCK_RAW, IPPROTO_ICMP)`,
+                `> TTL set to 64`,
+                `> [SEQ 1] Sent 64 bytes → ${target}`,
+                `> [SEQ 1] ✓ Reply from ${target}  RTT: 12.443ms`,
+                `> [SEQ 2] ✓ Reply from ${target}  RTT: 11.891ms`,
+                `> [SEQ 3] ✓ Reply from ${target}  RTT: 13.002ms`,
+                `<span class="text-warning">> [SEQ 4] ✗ TIMEOUT (2000ms exceeded)</span>`,
+                `> [SEQ 5] ✓ Reply from ${target}  RTT: 12.771ms`,
+                `─────────────────────────────────────`,
+                `STATS │ Sent: 5 │ Recv: 4 │ <span class="text-warning">Loss: 20.0%</span>`,
+                `      │ Min: 11.891ms │ Avg: 12.527ms │ Max: 13.002ms`,
+                `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+            ];
+
+            let sent = 0;
+            let recvCount = 0;
+            let totalRtt = 0;
+
+            for(let i=0; i<demoLines.length; i++) {
+                let line = demoLines[i];
+                outputDiv.innerHTML += line + "<br>";
+                outputDiv.scrollTop = outputDiv.scrollHeight;
+                
+                // Update stats live
+                if(line.includes("[SEQ")) {
+                    sent++;
+                    uiSent.innerText = sent;
+                    if(line.includes("✓")) {
+                        recvCount++;
+                        let match = line.match(/RTT: ([\d\.]+)ms/);
+                        if(match) totalRtt += parseFloat(match[1]);
+                    }
+                    uiRecv.innerText = ((recvCount / sent) * 100).toFixed(1);
+                    if(recvCount > 0) uiRtt.innerText = (totalRtt / recvCount).toFixed(1);
+                }
+
+                await new Promise(r => setTimeout(r, 150));
+            }
+
+            probeBtn.disabled = false;
+            probeBtn.style.opacity = 1;
+        }
+
+        probeBtn.addEventListener("click", runDemo);
+        inpt.addEventListener("keypress", (e) => {
+            if(e.key === 'Enter') runDemo();
+        });
+
+    </script>
+</body>
+</html>
